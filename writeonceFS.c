@@ -11,7 +11,7 @@ extern int errno;
 
 // SUPER BLOCK | INODE | BITMAP | DATA
 
-char DISK[DISK_SIZE];
+char* DISK;
 char block_map[1024 * 4];
 typedef struct
 {
@@ -49,6 +49,7 @@ typedef struct
 int wo_mount(char *filename, void *address)
 {
     // FILE* ptr;
+    DISK = address;
     int ptr = open(filename, O_RDWR | O_CREAT, 0777);
     if (ptr != -1)
     {
@@ -175,6 +176,9 @@ char* my_strncat(char *dest, char *src, size_t n)
     return dest;
 }
 
+int getMin(int num1, int num2) {
+    return num1 > num2 ? num2 : num1;
+}
 
 int wo_read( int fd,  void* buffer, int bytes ) {
     void* curr = DISK + 1024;
@@ -190,21 +194,21 @@ int wo_read( int fd,  void* buffer, int bytes ) {
             char* head = DISK + 1024 + 1024 * 50 + 4 * 1024 + 1024 * (start);
             int dptr = 0;
             int inodeFileSize = ((inode *)curr)->total_size_of_file;
-            int count = (bytes>inodeFileSize?inodeFileSize:bytes);
+            int count = getMin(bytes, inodeFileSize);
 
             //What if first block's next == -1 i.e file is empty.
             // while(((data_block *)head)->next == -1) {
                 int temp =0;
                 while(count>0) {
-                    my_strncat((char* )buffer, ((data_block *)head)->data, (count >= 1020? 1020: count));
+                    my_strncat((char* )buffer, ((data_block *)head)->data, getMin(count, 1020));
                     // printf(" HEAD DATA = %s\n", ((data_block *)head)->data);
                     
                     printf("========================================================\n");
                     printf("BUFFER KONTENT= %s\n",buffer);
                     printf("========================================================\n");
-                    buffer = buffer + (count >= 1020? 1020: count);
+                    buffer = buffer + getMin(count, 1020);
                     
-                    count-= (count >= 1020? 1020: count);
+                    count-= getMin(count, 1020);
 
                     // if(((data_block *)head)->next == -1) {
                     //     break;
@@ -293,12 +297,12 @@ int wo_write(int fd, void *buffer, int bytes)
                 {
                     previous_data_block = target_data_block;
                     char *free_data_block = DISK + 1024 + (50 * 1024) + (4 * 1024) + (target_data_block * 1024);
-                    strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer, (count >= 1020 ? 1020 : count));
+                    strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer, getMin(count, 1020));
                     printf("===============DATA =================\n %s\n",((data_block *)free_data_block)->data);
                     ((inode *)(curr))->data_block_start = target_data_block;
-                    ((inode *)(curr))->total_size_of_file += (count >= 1020 ? 1020 : count);
+                    ((inode *)(curr))->total_size_of_file += getMin(count, 1020);
                     printf("Total FILE SIZE1 = %d\n", ((inode *)(curr))->total_size_of_file);
-                    count-=(count >= 1020 ? 1020 : count);
+                    count-=getMin(count, 1020);
                 }
                 else
                 {
@@ -317,8 +321,8 @@ int wo_write(int fd, void *buffer, int bytes)
                             ((data_block *)prev_free_data_block)->next = target_data_block;
                             previous_data_block = target_data_block;
                             char *free_data_block = DISK + 1024 + (50 * 1024) + (4 * 1024) + (target_data_block * 1024);
-                            strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer + ((x + 1) * 1020), (count >= 1020 ? 1020 : count));
-                            ((inode *)(curr))->total_size_of_file += (count >= 1020 ? 1020 : count);
+                            strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer + ((x + 1) * 1020), getMin(count, 1020));
+                            ((inode *)(curr))->total_size_of_file += getMin(count, 1020);
                             printf("Total FILE SIZE2 = %d\n", ((inode *)(curr))->total_size_of_file);
                             ((data_block *)free_data_block)->next = -1;
                         }
@@ -383,11 +387,11 @@ int wo_write(int fd, void *buffer, int bytes)
                 int remaining_size = 1020 - file_size;
                 int count = bytes;
                 printf("File Size : %d\n",file_size);
-                strncat(((data_block *)data_itr)->data,tempBuffer, ((count <= remaining_size)?count:remaining_size));
+                strncat(((data_block *)data_itr)->data,tempBuffer, getMin(count, remaining_size));
                 printf("##33333333333333# %d , %d\n",count, remaining_size);
-                ((inode *)(curr))->total_size_of_file += ((count <= remaining_size)?count:remaining_size);
+                ((inode *)(curr))->total_size_of_file += getMin(count, remaining_size);
                 printf("Total FILE SIZE3 = %d\n", ((inode *)(curr))->total_size_of_file);
-                count-= ((count <= remaining_size)?count:remaining_size);
+                count-= getMin(count, remaining_size);
                 // if (remaining_size > 0)
                 // {
                 //     //((count <= remaining_size)?count:remaining_size)
@@ -415,9 +419,9 @@ int wo_write(int fd, void *buffer, int bytes)
                 {
                     previous_data_block = target_data_block;
                     char *free_data_block = DISK + 1024 + (50 * 1024) + (4 * 1024) + (target_data_block * 1024);
-                    strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer+remaining_size, (count >= 1020 ? 1020 : count));
+                    strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer+remaining_size, getMin(count, 1020));
                     //((inode *)(curr))->data_block_start = target_data_block;
-                    ((inode *)(curr))->total_size_of_file += (count >= 1020 ? 1020 : count);
+                    ((inode *)(curr))->total_size_of_file += getMin(count, 1020);
                     printf("Total FILE SIZE4 = %d\n", ((inode *)(curr))->total_size_of_file);
                     // count-=1016;
                 }
@@ -439,8 +443,8 @@ int wo_write(int fd, void *buffer, int bytes)
                             ((data_block *)prev_free_data_block)->next = target_data_block;
                             previous_data_block = target_data_block;
                             char *free_data_block = DISK + 1024 + (50 * 1024) + (4 * 1024) + (target_data_block * 1024);
-                            strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer+remaining_size + ((x + 1) * 1020), (count >= 1020 ? 1020 : count));
-                            ((inode *)(curr))->total_size_of_file += (count >= 1020 ? 1020 : count);
+                            strncpy(((data_block *)free_data_block)->data, (char *)tempBuffer+remaining_size + ((x + 1) * 1020), getMin(count, 1020));
+                            ((inode *)(curr))->total_size_of_file += getMin(count, 1020);
                             printf("Total FILE SIZE5 = %d\n", ((inode *)(curr))->total_size_of_file);
                         }
                         else
@@ -509,10 +513,11 @@ int main()
 {
 
     // test();
-    wo_mount("disk.txt", &DISK);
-        wo_unmount(&DISK);
+    char* c = (char*)malloc(DISK_SIZE);
+    wo_mount("disk.txt", c);
+        wo_unmount(c);
 
-        wo_mount("disk.txt", &DISK);
+        wo_mount("disk.txt", c);
     int fd = wo_open("ashwin.txt", 1, "current");
     // printf("File Descriptor = %d\n",wo_open("ashwin.txt",1,"current"));
 
@@ -568,10 +573,10 @@ int main()
     // printf("Data BLOCK Content 14 = %s\n", ((data_block *)(DISK + 1024 + (1024 * 50) + (1024 * 4) + 1024 * 13))->data);
 
     printf("Total File Size = %d\n", ((inode *)(DISK + 1024))->total_size_of_file);
-    char res[2041];
-    wo_read(fd,&res,2041);
+    char res[4082];
+    wo_read(fd,&res,4082);
     printf(" File content = %s\n", res);
-    wo_unmount(&DISK);
+    wo_unmount(c);
 
     // prettyPrintInodes(&DISK);
     // prettyPrintSuperBlock(&DISK);
