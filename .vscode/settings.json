@@ -9,6 +9,10 @@
         "utility": "c",
         "string": "c",
         "chrono": "c",
-        "algorithm": "c"
+        "algorithm": "c",
+        "atomic": "cpp",
+        "sstream": "cpp",
+        "stdarg.h": "c",
+        "complex": "c"
     }
 }
